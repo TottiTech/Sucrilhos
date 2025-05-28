@@ -1,7 +1,8 @@
+#include "simulador.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "simulador.h"
 
-iniciar_simulador(Simulador *sim){
-    
+
+void iniciar_simulador(Simulador *sim, int tam_pagina, int tam_memoria, int algoritmo){
+    //codigo
 }

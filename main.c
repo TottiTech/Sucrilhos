@@ -1,5 +1,5 @@
+#include "simulador.h"
 #include <stdio.h>
-#include <simulador.h>
 
 int main(){
 
