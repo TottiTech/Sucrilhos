@@ -65,11 +65,6 @@ void extrair_pagina_deslocamento(Simulador *sim, int endereco_virtual, int *pagi
     *deslocamento = endereco_virtual % sim->tamanho_pagina;
 }
 
-int verificar_pagina_presente(Simulador *sim, int pid, int pagina){
-    //codigo
-    return 0;
-}
-
 int carregar_pagina(Simulador *sim, int pid, int pagina){
     int frame = -1;
     //verificar se há algum frame livre
@@ -122,8 +117,19 @@ int substituir_pagina_fifo(Simulador *sim){
 }
 
 int substituir_pagina_lru(Simulador *sim){
-    //codigo
-    return 0;
+    int frame = -1;
+    int menor_tempo = sim->tempo_atual+1;
+    for(int i = 0; i < sim->memoria.num_frames; i++){
+        int pid = sim->memoria.frames[i].pid;
+        int pag = sim->memoria.frames[i].pagina;
+
+        int tempo_acesso = sim->processos[pid].tabela_paginas[pag].ultimo_acesso;
+        if(tempo_acesso < menor_tempo){
+            menor_tempo = tempo_acesso;
+            frame = i;
+        }
+    }
+    return frame;
 }
 
 int substituir_pagina_clock(Simulador *sim){

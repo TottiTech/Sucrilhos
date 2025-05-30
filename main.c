@@ -53,6 +53,12 @@ int main(){
             int tam;
             printf("Tamanho do processo em bytes: ");
             scanf("%d", &tam);
+            if(tam > 0){
+                criar_processo(&sim, tam);
+            }else{
+                printf("Impossível criar processo com tamanho 0 ou negativo");
+            }
+
         }
         else if(opt == 2){
             if(sim.num_processos > 0){
