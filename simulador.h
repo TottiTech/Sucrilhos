@@ -20,9 +20,13 @@ typedef struct{
 } Processo;
 
 typedef struct{
+    int pid;
+    int pagina;
+}Frame;
+
+typedef struct{
     int num_frames;     // Numero total de frames em memoria fisica
-    int *frames;        // Array de frames (cada elemento contem o pid e a pagina)
-                        // Ex: frames[1] = (pid << 16) | num_pagina
+    Frame *frames;        // Array de frames (cada elemento contem o pid e a pagina)
     int *tempo_carga;   // Tempo em que cada frame foi carregado (Para FIFO)
 } MemoriaFisica;
 
@@ -45,7 +49,7 @@ typedef struct{
 int traduzir_endereco(Simulador *sim, int pid, int endereco_virtual){
     int pagina = endereco_virtual / sim->tamanho_pagina;
     int deslocamento = endereco_virtual % sim->tamanho_pagina;
-    if(pagina < 0 || pagina > sim->processos[pid].num_paginas){
+    if(pagina < 0 || pagina >= sim->processos[pid].num_paginas){
         return ENDERECO_INVALIDO;
     }
     Pagina *p = &sim->processos[pid].tabela_paginas[pagina];
@@ -57,7 +61,8 @@ int traduzir_endereco(Simulador *sim, int pid, int endereco_virtual){
 }
 
 void extrair_pagina_deslocamento(Simulador *sim, int endereco_virtual, int *pagina, int *deslocamento){
-    //codigo
+    *pagina = endereco_virtual / sim->tamanho_pagina;
+    *deslocamento = endereco_virtual % sim->tamanho_pagina;
 }
 
 int verificar_pagina_presente(Simulador *sim, int pid, int pagina){
@@ -66,13 +71,54 @@ int verificar_pagina_presente(Simulador *sim, int pid, int pagina){
 }
 
 int carregar_pagina(Simulador *sim, int pid, int pagina){
-    //codigo
+    int frame = -1;
+    //verificar se há algum frame livre
+    for(int i = 0; i < sim->memoria.num_frames; i++){
+        if(sim->memoria.frames[i].pid == -1){
+            frame = i;
+            break;
+        }
+    }
+
+    //caso não tenha frame livre, buscar qual frame sera substituido
+    if(frame == -1){    
+        if(sim->algoritmo == 0){
+            frame = substituir_pagina_fifo(sim);
+        }else{
+            frame = substituir_pagina_lru(sim);
+        }
+        int pid_vitima = sim->memoria.frames[frame].pid; //carrega o pid da pagina que será substituda
+        int pag_vitima = sim->memoria.frames[frame].pagina; // e a pagina que será substituida
+
+        sim->processos[pid_vitima].tabela_paginas[pag_vitima].presente = 0; //altera de 1 (presente) pra 0 (não presente)
+        sim->processos[pid_vitima].tabela_paginas[pag_vitima].frame = -1; // altera o frame atual da pagina pra -1 (em nenhum frame)
+
+    }
+
+    //colocar pagina no frame
+    sim->memoria.frames[frame].pid = pid;
+    sim->memoria.frames[frame].pagina = pagina;
+    sim->memoria.tempo_carga[frame] = sim->tempo_atual;
+
+    //atualiza tabela de paginas
+    Pagina *p = &sim->processos[pid].tabela_paginas[pagina];
+    p->presente = 1;
+    p->frame = frame;
+    p->tempo_carga = sim->tempo_atual;
+    p->ultimo_acesso = sim->tempo_atual;
     return 0;
 }
 
 int substituir_pagina_fifo(Simulador *sim){
-    //codigo
-    return 0;
+    int frame = -1;
+    int menor_tempo = sim->tempo_atual+1;
+    for(int i = 0; i < sim->memoria.num_frames; i++){
+     if(sim->memoria.tempo_carga[i] < menor_tempo){
+        menor_tempo = sim->memoria.tempo_carga[i];
+        frame = i;
+     }   
+    }
+    return frame;
 }
 
 int substituir_pagina_lru(Simulador *sim){
@@ -90,30 +136,23 @@ int substituir_pagina_random(Simulador *sim){
     return 0;
 }
 
-
-
-void registrar_acesso(Simulador *sim, int pid, int pagina){
-    //registra o tempo em que a pagina foi acessada (usado em LRU)
-    sim->processos[pid].tabela_paginas[pagina].ultimo_acesso = sim->tempo_atual;
-}
-
 int acessar_memoria(Simulador *sim, int pid, int endereco_virtual){
     sim->total_acessos++;
     sim->tempo_atual++;
     int pag = endereco_virtual / sim->tamanho_pagina;
 
-    int end_fisico = traduzir_endereco(sim, pid, endereco_virtual);
-    if(end_fisico == ENDERECO_INVALIDO){
+    int end_fisico = traduzir_endereco(sim, pid, endereco_virtual);//produca o endereco virutal nos frames
+    if(end_fisico == ENDERECO_INVALIDO){ //se o endereco é invalido, informa e retorna -1
         printf("Erro: endereço invalido para o processo.");
         return -1;
     }
-    if(end_fisico == PAGE_FAULT){
-        carregar_pagina(sim, pid, pag);
-        sim->page_faults++;
-        end_fisico = traduzir_endereco(sim, pid, endereco_virtual);
+    if(end_fisico == PAGE_FAULT){ //se a pagina nao foi encontrada
+        carregar_pagina(sim, pid, pag); //carrega pagina
+        sim->page_faults++; //incrementa o page fault
+        end_fisico = traduzir_endereco(sim, pid, endereco_virtual); //recalcula o endereco fisico para retornar
 
     }
-    sim->processos[pid].tabela_paginas[pag].ultimo_acesso = sim->tempo_atual;
+    sim->processos[pid].tabela_paginas[pag].ultimo_acesso = sim->tempo_atual; //registra o acesso a pagina
 
     return end_fisico;
 }

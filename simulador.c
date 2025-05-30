@@ -15,12 +15,13 @@ void iniciar_simulador(Simulador *sim, int tam_pagina, int tam_memoria, int algo
 
     //Calcular frames
     sim->memoria.num_frames = tam_memoria/tam_pagina;
-    sim->memoria.frames = (int *)malloc(sizeof(int)* sim->memoria.num_frames);
+    sim->memoria.frames = (Frame *)malloc(sizeof(Frame)* sim->memoria.num_frames);
     sim->memoria.tempo_carga = (int *)malloc(sizeof(int)*sim->memoria.num_frames);
 
     //Inicializar frames livres e com tempo 0
     for(int i = 0; i < sim->memoria.num_frames; i++){
-        sim->memoria.frames[i] = -1;
+        sim->memoria.frames[i].pid = -1;
+        sim->memoria.frames[i].pagina = -1;
         sim->memoria.tempo_carga[i] = 0;
     }
 
@@ -77,13 +78,11 @@ void exibir_memoria(Simulador *sim){
     for(int i = 0; i < sim->memoria.num_frames; i++){
         printf("--------\n");
 
-        int frame = sim->memoria.frames[i];
-        if(frame == -1){
+        Frame f = sim->memoria.frames[i];
+        if(f.pid == -1){
             printf("| ---- |\n"); //frame vazio
         }else{
-            int pid = frame >> 16;
-            int pagina = frame & 0xFFFF;
-            printf("| P%-2d-%-2d |\n", pid, pagina);
+            printf("| P%-2d-%-2d |\n", f.pid, f.pagina);
         }
     }
     printf("--------\n");
