@@ -1,5 +1,7 @@
 #ifndef SIMULADOR_H
 #define SIMULADOR_H
+#define ENDERECO_INVALIDO -2
+#define PAGE_FAULT -1
 
 typedef struct{
     int presente;       // 1 se a pagina esta na mamoria, 0 caso contrario
@@ -41,8 +43,17 @@ typedef struct{
 } Simulador;
 
 int traduzir_endereco(Simulador *sim, int pid, int endereco_virtual){
-    //codigo
-    return 0;
+    int pagina = endereco_virtual / sim->tamanho_pagina;
+    int deslocamento = endereco_virtual % sim->tamanho_pagina;
+    if(pagina < 0 || pagina > sim->processos[pid].num_paginas){
+        return ENDERECO_INVALIDO;
+    }
+    Pagina *p = &sim->processos[pid].tabela_paginas[pagina];
+    if(!p->presente){
+        return PAGE_FAULT;
+    }
+    int frame = p->frame;
+    return frame * sim->tamanho_pagina + deslocamento;
 }
 
 void extrair_pagina_deslocamento(Simulador *sim, int endereco_virtual, int *pagina, int *deslocamento){
@@ -79,24 +90,32 @@ int substituir_pagina_random(Simulador *sim){
     return 0;
 }
 
-void exibir_memoria_fisica(Simulador *sim){
-    //codigo
-}
 
-void exibir_estatisticas(Simulador *sim){
-    //codigo
-}
 
-void registrar_acesso(Simulador *sim, int pid, int pagina, int tipo_acesso){
-    //codigo
-}
-
-void executar_simulacao(Simulador *sim, int algoritmo){
-    //codigo
+void registrar_acesso(Simulador *sim, int pid, int pagina){
+    //registra o tempo em que a pagina foi acessada (usado em LRU)
+    sim->processos[pid].tabela_paginas[pagina].ultimo_acesso = sim->tempo_atual;
 }
 
 int acessar_memoria(Simulador *sim, int pid, int endereco_virtual){
-    //codigo
+    sim->total_acessos++;
+    sim->tempo_atual++;
+    int pag = endereco_virtual / sim->tamanho_pagina;
+
+    int end_fisico = traduzir_endereco(sim, pid, endereco_virtual);
+    if(end_fisico == ENDERECO_INVALIDO){
+        printf("Erro: endereço invalido para o processo.");
+        return -1;
+    }
+    if(end_fisico == PAGE_FAULT){
+        carregar_pagina(sim, pid, pag);
+        sim->page_faults++;
+        end_fisico = traduzir_endereco(sim, pid, endereco_virtual);
+
+    }
+    sim->processos[pid].tabela_paginas[pag].ultimo_acesso = sim->tempo_atual;
+
+    return end_fisico;
 }
 
 #endif
