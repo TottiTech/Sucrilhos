@@ -16,7 +16,7 @@ void iniciar_simulador(Simulador *sim, int tam_pagina, int tam_memoria, int algo
     //Calcular frames
     sim->memoria.num_frames = tam_memoria/tam_pagina;
     sim->memoria.frames = (int *)malloc(sizeof(int)* sim->memoria.num_frames);
-    sim->memoria.tempo_carga = (int *)maloc(sizeof(int)*sim->memoria.num_frames);
+    sim->memoria.tempo_carga = (int *)malloc(sizeof(int)*sim->memoria.num_frames);
 
     //Inicializar frames livres e com tempo 0
     for(int i = 0; i < sim->memoria.num_frames; i++){
@@ -68,7 +68,7 @@ void criar_processo(Simulador *sim, int tam){
     sim->processos[sim->num_processos] = novo_processo;
     sim->num_processos++;
 
-    printf("Processo %d criado com %d paginas", novo_processo.pid, novo_processo.num_paginas);
+    printf("Processo %d criado com %d paginas\n", novo_processo.pid, novo_processo.num_paginas);
 }
 
 //representação da memoria fisica
@@ -79,12 +79,29 @@ void exibir_memoria(Simulador *sim){
 
         int frame = sim->memoria.frames[i];
         if(frame == -1){
-            printf("| --- |\n"); //frame vazio
+            printf("| ---- |\n"); //frame vazio
         }else{
             int pid = frame >> 16;
-            int pagina = frame & 0xFFF;
+            int pagina = frame & 0xFFFF;
             printf("| P%-2d-%-2d |\n", pid, pagina);
         }
     }
     printf("--------\n");
+}
+
+void exibir_stats(Simulador *sim){
+    printf("\n=== Estatisticas ===\n");
+    printf("Total de acessos: %d\n", sim->total_acessos);
+    printf("Total de page faults: %d\n", sim->page_faults);
+    if(sim->total_acessos > 0){
+        double taxa = (100.0 * sim->page_faults) / sim->total_acessos;
+        printf("Taxa de page faults: %.2f%%\n", taxa);
+    }
+    printf("=====================\n");
+}
+
+void exec_sim(Simulador *sim){
+    printf("Executando simulação");
+    //codigo
+    printf("Simulação executada");
 }
