@@ -155,10 +155,32 @@ void exec_sim(Simulador *sim){
     
     printf("\nMemória física limpa. Iniciando padrões de acesso...\n");
     
+    // Teste específico para garantir páginas diferentes
+    if(sim->num_processos > 0) {
+        printf("\n--- Teste de páginas diferentes ---\n");
+        
+        // Acessar primeira página
+        acessar_memoria(sim, 0, 0);
+        
+        // Acessar segunda página se existir
+        if(sim->processos[0].tamanho > sim->tamanho_pagina) {
+            acessar_memoria(sim, 0, sim->tamanho_pagina);
+        }
+        
+        // Acessar terceira página se existir
+        if(sim->processos[0].tamanho > 2 * sim->tamanho_pagina) {
+            acessar_memoria(sim, 0, 2 * sim->tamanho_pagina);
+        }
+        
+        // Acessar última página
+        int endereco_final = sim->processos[0].tamanho - 1;
+        acessar_memoria(sim, 0, endereco_final);
+    }
+    
     // Simular diferentes padrões de acesso para cada processo
     for(int i = 0; i < sim->num_processos; i++) {
         int pid = sim->processos[i].pid;
-        int num_acessos = 10; // Número de acessos por padrão
+        int num_acessos = 5;
         
         // Padrão 1: Acesso sequencial
         simular_acesso_sequencial(sim, pid, num_acessos);
@@ -173,12 +195,13 @@ void exec_sim(Simulador *sim){
     }
     
     // Simular competição entre processos
-    printf("\n--- Simulando competição entre processos ---\n");
-    for(int round = 0; round < 20; round++) {
-        int pid = rand() % sim->num_processos;
-        int endereco = rand() % sim->processos[pid].tamanho;
-        printf("\nRound %d: ", round + 1);
-        acessar_memoria(sim, pid, endereco);
+    if(sim->num_processos > 1) {
+        printf("\n--- Simulando competição entre processos ---\n");
+        for(int round = 0; round < 10; round++) {
+            int pid = rand() % sim->num_processos;
+            int endereco = rand() % sim->processos[pid].tamanho;
+            acessar_memoria(sim, pid, endereco);
+        }
     }
     
     printf("\n=== Simulação Concluída ===\n");

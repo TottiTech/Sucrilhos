@@ -148,29 +148,35 @@ int substituir_pagina_random(Simulador *sim){
 
 int acessar_memoria(Simulador *sim, int pid, int endereco_virtual){
     sim->total_acessos++;
-    sim->tempo_atual++;
-    int pag = endereco_virtual / sim->tamanho_pagina;
-
-    printf("Acesso %d: P%d tentando acessar endereço virtual %d (página %d)\n", 
-           sim->total_acessos, pid, endereco_virtual, pag);
-
-    int end_fisico = traduzir_endereco(sim, pid, endereco_virtual);//produz o endereco virtual nos frames
-    if(end_fisico == ENDERECO_INVALIDO){ //se o endereco é invalido, informa e retorna -1
+    
+    int pagina = endereco_virtual / sim->tamanho_pagina;
+    
+    int end_fisico = traduzir_endereco(sim, pid, endereco_virtual);
+    
+    if(end_fisico == ENDERECO_INVALIDO){
         printf("Erro: endereço inválido para o processo %d.\n", pid);
         return -1;
     }
-    if(end_fisico == PAGE_FAULT){ //se a pagina nao foi encontrada
-        printf("Page fault detectado para P%d página %d\n", pid, pag);
-        carregar_pagina(sim, pid, pag); //carrega pagina
-        sim->page_faults++; //incrementa o page fault
-        end_fisico = traduzir_endereco(sim, pid, endereco_virtual); //recalcula o endereco fisico para retornar
-        printf("Página carregada. Endereço físico: %d\n", end_fisico);
-    } else {
-        printf("Hit: Endereço físico %d (frame %d)\n", end_fisico, end_fisico / sim->tamanho_pagina);
+    
+    if(end_fisico == PAGE_FAULT){
+        // Page fault - carrega a página
+        carregar_pagina(sim, pid, pagina);
+        sim->page_faults++;
+        end_fisico = traduzir_endereco(sim, pid, endereco_virtual);
     }
     
-    sim->processos[pid].tabela_paginas[pag].ultimo_acesso = sim->tempo_atual; //registra o acesso a pagina
-
+    // Atualiza o último acesso
+    sim->processos[pid].tabela_paginas[pagina].ultimo_acesso = sim->tempo_atual;
+    
+    // Calcula o frame onde está a página
+    int frame = sim->processos[pid].tabela_paginas[pagina].frame;
+    
+    // Exibe no formato solicitado
+    printf("Tempo t=%d: Endereço Virtual (P%d): %d -> Página: %d -> Frame: %d -> Endereço Físico: %d\n",
+           sim->tempo_atual, pid, endereco_virtual, pagina, frame, end_fisico);
+    
+    sim->tempo_atual++;
+    
     return end_fisico;
 }
 
